@@ -1,13 +1,16 @@
-import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian';
+import * as jszip from 'jszip';
+import {App, Notice, Plugin, PluginSettingTab, Setting} from 'obsidian';
 
-// Remember to rename these classes and interfaces!
+const base_url = "http://rmnotesynclaravel-env.eba-3h3bny9s.eu-central-1.elasticbeanstalk.com";
 
 interface MyPluginSettings {
-	mySetting: string;
+	access_token?: string;
+	last_successful_sync_id: number;
 }
 
 const DEFAULT_SETTINGS: MyPluginSettings = {
-	mySetting: 'default'
+	access_token: null,
+	last_successful_sync_id: -1
 }
 
 export default class MyPlugin extends Plugin {
@@ -15,71 +18,12 @@ export default class MyPlugin extends Plugin {
 
 	async onload() {
 		await this.loadSettings();
-
-		// This creates an icon in the left ribbon.
-		const ribbonIconEl = this.addRibbonIcon('dice', 'Sample Plugin', (evt: MouseEvent) => {
-			// Called when the user clicks the icon.
-			new Notice('This is a notice!');
-		});
-		// Perform additional things with the ribbon
-		ribbonIconEl.addClass('my-plugin-ribbon-class');
-
-		// This adds a status bar item to the bottom of the app. Does not work on mobile apps.
-		const statusBarItemEl = this.addStatusBarItem();
-		statusBarItemEl.setText('Status Bar Text');
-
-		// This adds a simple command that can be triggered anywhere
-		this.addCommand({
-			id: 'open-sample-modal-simple',
-			name: 'Open sample modal (simple)',
-			callback: () => {
-				new SampleModal(this.app).open();
-			}
-		});
-		// This adds an editor command that can perform some operation on the current editor instance
-		this.addCommand({
-			id: 'sample-editor-command',
-			name: 'Sample editor command',
-			editorCallback: (editor: Editor, view: MarkdownView) => {
-				console.log(editor.getSelection());
-				editor.replaceSelection('Sample Editor Command');
-			}
-		});
-		// This adds a complex command that can check whether the current state of the app allows execution of the command
-		this.addCommand({
-			id: 'open-sample-modal-complex',
-			name: 'Open sample modal (complex)',
-			checkCallback: (checking: boolean) => {
-				// Conditions to check
-				const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
-				if (markdownView) {
-					// If checking is true, we're simply "checking" if the command can be run.
-					// If checking is false, then we want to actually perform the operation.
-					if (!checking) {
-						new SampleModal(this.app).open();
-					}
-
-					// This command will only show up in Command Palette when the check function returns true
-					return true;
-				}
-			}
-		});
-
-		// This adds a settings tab so the user can configure various aspects of the plugin
 		this.addSettingTab(new SampleSettingTab(this.app, this));
 
-		// If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
-		// Using this function will automatically remove the event listener when this plugin is disabled.
-		this.registerDomEvent(document, 'click', (evt: MouseEvent) => {
-			console.log('click', evt);
-		});
-
-		// When registering intervals, this function will automatically clear the interval when the plugin is disabled.
-		this.registerInterval(window.setInterval(() => console.log('setInterval'), 5 * 60 * 1000));
-	}
-
-	onunload() {
-
+		if (this.settings.access_token !== null) {
+			const json = await fetchSyncDelta(this.settings.access_token);
+			synchronize(json, this);
+		}
 	}
 
 	async loadSettings() {
@@ -91,20 +35,67 @@ export default class MyPlugin extends Plugin {
 	}
 }
 
-class SampleModal extends Modal {
-	constructor(app: App) {
-		super(app);
+async function synchronize(syncResponse: { id: number, download_url: string, filename: string }[], plugin: MyPlugin) {
+	const lastSuccessfulSync = plugin.settings.last_successful_sync_id;
+	const newFiles = syncResponse.filter((res) => res.id > lastSuccessfulSync);
+
+	const fileCount = newFiles.length;
+	if (fileCount > 0) {
+		new Notice(`Found ${fileCount} new ReMarkable highlights. Downloading!`);
+	} else {
+		new Notice(`No new ReMarkable highlights found.`);
 	}
 
-	onOpen() {
-		const {contentEl} = this;
-		contentEl.setText('Woah!');
+	const vault = app.vault;
+	try {
+		await vault.createFolder('rm-highlights');
+	} catch (e) {
 	}
+	for (const {download_url, filename, id} of newFiles) {
+		new Notice(`Attempting to download ${filename}`,);
+		const response = await fetch(download_url, {
+			method: 'GET'
+		});
+		const blob = await response.blob();
+		const zip = await jszip.loadAsync(blob)
+		const data = await zip.file(/_remarks-only.pdf/)[0].async("arraybuffer");
 
-	onClose() {
-		const {contentEl} = this;
-		contentEl.empty();
+		let dirPath;
+		let nameOfFile;
+		{
+			const atoms = filename.split('/');
+			const dirs = atoms.slice(0, atoms.length - 1);
+			nameOfFile = atoms[atoms.length - 1].replace(':', '--');
+			dirPath = dirs.join('/');
+		}
+		const fullPath = `rm-highlights${dirPath}`;
+		try {
+			await vault.createFolder(fullPath);
+		} catch(e) {}
+
+		const filePath = `${fullPath}/${nameOfFile}.pdf`;
+		const file = vault.getAbstractFileByPath(filePath)
+		console.log(filePath, file);
+		if (file !== null) {
+			await vault.delete(file);
+		}
+		await vault.createBinary(filePath, data);
+
+		plugin.settings.last_successful_sync_id = id;
+		await plugin.saveSettings();
 	}
+}
+
+async function fetchSyncDelta(access_token: string) {
+	const response = await fetch(`${base_url}/api/sync/delta`, {
+		method: 'GET',
+		mode: 'cors',
+		headers: {
+			"Accept": "application/json",
+			"Authorization": `Bearer ${access_token}`
+		}
+	})
+	return await response.json();
 }
 
 class SampleSettingTab extends PluginSettingTab {
@@ -118,20 +109,79 @@ class SampleSettingTab extends PluginSettingTab {
 	display(): void {
 		const {containerEl} = this;
 
-		containerEl.empty();
+		let password = "";
+		let username = "";
 
-		containerEl.createEl('h2', {text: 'Settings for my awesome plugin.'});
+		containerEl.empty();
+		containerEl.createEl('h2', {text: 'Sync ReMarkable notes'});
 
 		new Setting(containerEl)
-			.setName('Setting #1')
-			.setDesc('It\'s a secret')
+			.setName('Login')
+			.setDesc('Login details')
 			.addText(text => text
-				.setPlaceholder('Enter your secret')
-				.setValue(this.plugin.settings.mySetting)
+				.setPlaceholder('Enter your username')
 				.onChange(async (value) => {
-					console.log('Secret: ' + value);
-					this.plugin.settings.mySetting = value;
-					await this.plugin.saveSettings();
-				}));
+					username = value;
+				}))
+			.addText(text => {
+				text.setPlaceholder('Enter your password');
+				text.inputEl.setAttribute('type', 'password');
+				text.onChange(async (value) => {
+					password = value;
+				});
+			})
+
+		new Setting(containerEl)
+			.setName('Login')
+			.setDesc('Log in')
+			.addButton((button) => {
+				button.setButtonText('Log in');
+				button.onClick(async (value) => {
+					const form = new URLSearchParams();
+					const input = {
+						'grant_type': 'password',
+						'client_id': 1,
+						'client_secret': '4L2wSQjPFAbGQFs6nfQkxxdNPBkWdfe86CIOxGlc',
+						'username': username,
+						'password': password,
+						'scope': '',
+					};
+					for (let [key, value] of Object.entries(input)) {
+						form.append(key, value);
+					}
+
+					try {
+						const response = await fetch(`${base_url}/oauth/token`, {
+							method: 'POST',
+							mode: 'cors',
+							headers: {
+								"Accept": "application/json, text/plain, */*",
+								"Content-Type": "application/x-www-form-urlencoded"
+							},
+							body: form
+						})
+						const result = await response.json();
+						this.plugin.settings.access_token = result.access_token;
+						await this.plugin.saveSettings();
+					} catch (error) {
+						console.log("error!", error);
+					}
+				});
+			})
+
+		new Setting(containerEl)
+			.setName('Manual synchronization')
+			.addButton((button) => {
+				button.setButtonText('Go');
+				button.onClick(async () => {
+					try {
+						const json = await fetchSyncDelta(this.plugin.settings.access_token);
+						synchronize(json, this.plugin);
+					} catch (e) {
+						console.log('Failure: ', e);
+					}
+
+				})
+			})
 	}
 }
