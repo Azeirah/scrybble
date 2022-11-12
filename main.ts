@@ -3,22 +3,22 @@ import {App, Notice, Plugin, PluginSettingTab, Setting} from 'obsidian';
 
 const base_url = "http://rmnotesynclaravel-env.eba-3h3bny9s.eu-central-1.elasticbeanstalk.com";
 
-interface MyPluginSettings {
+interface ScrybbleSettings {
 	access_token?: string;
 	last_successful_sync_id: number;
 }
 
-const DEFAULT_SETTINGS: MyPluginSettings = {
+const DEFAULT_SETTINGS: ScrybbleSettings = {
 	access_token: null,
 	last_successful_sync_id: -1
 }
 
-export default class MyPlugin extends Plugin {
-	settings: MyPluginSettings;
+export default class Scrybble extends Plugin {
+	settings: ScrybbleSettings;
 
 	async onload() {
 		await this.loadSettings();
-		this.addSettingTab(new SampleSettingTab(this.app, this));
+		this.addSettingTab(new Settings(this.app, this));
 
 		if (this.settings.access_token !== null) {
 			const json = await fetchSyncDelta(this.settings.access_token);
@@ -35,7 +35,7 @@ export default class MyPlugin extends Plugin {
 	}
 }
 
-async function synchronize(syncResponse: { id: number, download_url: string, filename: string }[], plugin: MyPlugin) {
+async function synchronize(syncResponse: { id: number, download_url: string, filename: string }[], plugin: Scrybble) {
 	const lastSuccessfulSync = plugin.settings.last_successful_sync_id;
 	const newFiles = syncResponse.filter((res) => res.id > lastSuccessfulSync);
 
@@ -98,10 +98,10 @@ async function fetchSyncDelta(access_token: string) {
 	return await response.json();
 }
 
-class SampleSettingTab extends PluginSettingTab {
-	plugin: MyPlugin;
+class Settings extends PluginSettingTab {
+	plugin: Scrybble;
 
-	constructor(app: App, plugin: MyPlugin) {
+	constructor(app: App, plugin: Scrybble) {
 		super(app, plugin);
 		this.plugin = plugin;
 	}
