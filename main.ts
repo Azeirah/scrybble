@@ -1,5 +1,5 @@
 import * as jszip from 'jszip';
-import {App, Notice, Plugin, PluginSettingTab, Setting} from 'obsidian';
+import {App, Notice, Plugin, PluginSettingTab, requestUrl, Setting} from 'obsidian';
 
 const base_url = "http://rmnotesynclaravel-env.eba-3h3bny9s.eu-central-1.elasticbeanstalk.com";
 
@@ -53,11 +53,11 @@ async function synchronize(syncResponse: { id: number, download_url: string, fil
 	}
 	for (const {download_url, filename, id} of newFiles) {
 		new Notice(`Attempting to download ${filename}`,);
-		const response = await fetch(download_url, {
-			method: 'GET'
+		const response = await requestUrl({
+			method: "GET",
+			url: download_url
 		});
-		const blob = await response.blob();
-		const zip = await jszip.loadAsync(blob)
+		const zip = await jszip.loadAsync(response.arrayBuffer)
 		const data = await zip.file(/_remarks-only.pdf/)[0].async("arraybuffer");
 
 		let dirPath;
@@ -179,7 +179,6 @@ class Settings extends PluginSettingTab {
 					} catch (e) {
 						console.log('Failure: ', e);
 					}
-
 				})
 			})
 	}
