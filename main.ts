@@ -75,7 +75,6 @@ async function synchronize(syncResponse: { id: number, download_url: string, fil
 
 		const filePath = `${fullPath}/${nameOfFile}.pdf`;
 		const file = vault.getAbstractFileByPath(filePath)
-		console.log(filePath, file);
 		if (file !== null) {
 			await vault.delete(file);
 		}
