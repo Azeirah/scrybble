@@ -52,6 +52,7 @@ class Settings extends PluginSettingTab {
 
 	display(): void {
 		const {containerEl} = this;
+		const access_token = getAccessToken();
 
 		let password = "";
 		let username = "";
@@ -59,58 +60,68 @@ class Settings extends PluginSettingTab {
 		containerEl.empty();
 		containerEl.createEl('h2', {text: 'Sync ReMarkable notes'});
 
-		new Setting(containerEl)
-			.setName('Login')
-			.setDesc('Login details')
-			.addText(text => text
-				.setPlaceholder('Enter your username')
-				.onChange(async (value) => {
-					username = value;
-				}))
-			.addText(text => {
-				text.setPlaceholder('Enter your password');
-				text.inputEl.setAttribute('type', 'password');
-				text.onChange(async (value) => {
-					password = value;
+		if (access_token === null) {
+			new Setting(containerEl)
+				.setName('Login')
+				.setDesc('Login details')
+				.addText(text => text
+					.setPlaceholder('Enter your username')
+					.onChange(async (value) => {
+						username = value;
+					}))
+				.addText(text => {
+					text.setPlaceholder('Enter your password');
+					text.inputEl.setAttribute('type', 'password');
+					text.onChange(async (value) => {
+						password = value;
+					});
+				})
+				.addButton((button) => {
+					button.setButtonText('Log in');
+					button.onClick(async () => {
+						try {
+							const {access_token} = await fetchOAuthToken(username, password);
+							localStorage.setItem('scrybble_access_token', access_token);
+						} catch (error) {
+							new Notice("Scrybble: Failed to log in, check your username and password")
+							console.log("error!", error);
+						}
+					});
 				});
-			})
-
-		new Setting(containerEl)
-			.setName('Login')
-			.setDesc('Log in')
-			.addButton((button) => {
-				button.setButtonText('Log in');
-				button.onClick(async () => {
-					try {
-						const {access_token} = await fetchOAuthToken(username, password);
-						localStorage.setItem('scrybble_access_token', access_token);
-					} catch (error) {
-						console.log("error!", error);
-					}
+		} else {
+			new Setting(containerEl)
+				.setName('Log out')
+				.setDesc('You are currently logged in')
+				.addButton((button) => {
+					button.setButtonText('Log out');
+					button.onClick(async () => {
+						localStorage.removeItem('scrybble_access_token');
+					});
 				});
-			})
 
-		new Setting(containerEl)
-			.setName('Manual synchronization')
-			.addButton((button) => {
-				button.setButtonText('Go');
-				button.onClick(async () => {
-					try {
+			new Setting(containerEl)
+				.setName('Manual synchronization')
+				.addButton((button) => {
+					button.setButtonText('Go');
+					button.onClick(async () => {
 						const token = getAccessToken();
 						if (token === null) {
 							new Notice("Scrybble: Failed to synchronize. Are you logged in?");
 							return;
 						}
-						const sync_delta = await fetchSyncDelta(token);
-						const new_last_sync_id = await synchronize(sync_delta, this.plugin.settings.last_successful_sync_id);
-						if (new_last_sync_id) {
-							this.plugin.settings.last_successful_sync_id = new_last_sync_id;
-							await this.plugin.saveSettings();
+						try {
+							const sync_delta = await fetchSyncDelta(token);
+							const new_last_sync_id = await synchronize(sync_delta, this.plugin.settings.last_successful_sync_id);
+							if (new_last_sync_id) {
+								this.plugin.settings.last_successful_sync_id = new_last_sync_id;
+								await this.plugin.saveSettings();
+							}
+						} catch (e) {
+							new Notice("Scrybble: sync error reference = 101");
 						}
-					} catch (e) {
-						new Notice("Scrybble: Failed to log-in, check your username and password");
-					}
+					})
 				})
-			})
+		}
+
 	}
 }
