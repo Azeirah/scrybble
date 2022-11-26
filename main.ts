@@ -66,13 +66,13 @@ class Settings extends PluginSettingTab {
 				.setDesc('Login details')
 				.addText(text => text
 					.setPlaceholder('Enter your username')
-					.onChange(async (value) => {
+					.onChange((value) => {
 						username = value;
 					}))
 				.addText(text => {
 					text.setPlaceholder('Enter your password');
 					text.inputEl.setAttribute('type', 'password');
-					text.onChange(async (value) => {
+					text.onChange((value) => {
 						password = value;
 					});
 				})
@@ -84,7 +84,6 @@ class Settings extends PluginSettingTab {
 							localStorage.setItem('scrybble_access_token', access_token);
 						} catch (error) {
 							new Notice("Scrybble: Failed to log in, check your username and password")
-							console.log("error!", error);
 						}
 					});
 				});

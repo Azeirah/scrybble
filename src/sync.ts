@@ -1,9 +1,11 @@
 import {Notice, requestUrl} from "obsidian";
 import * as jszip from "jszip";
 
-const base_url = "http://rmnotesynclaravel-env.eba-3h3bny9s.eu-central-1.elasticbeanstalk.com";
+const base_url = "https://scybble.com";
 
-export async function synchronize(syncResponse: { id: number, download_url: string, filename: string }[], lastSuccessfulSync: number): Promise<number | undefined> {
+type SyncDelta = { id: number, download_url: string, filename: string };
+
+export async function synchronize(syncResponse: ReadonlyArray<SyncDelta>, lastSuccessfulSync: number): Promise<number | undefined> {
 	const newFiles = syncResponse.filter((res) => res.id > lastSuccessfulSync);
 
 	const fileCount = newFiles.length;
@@ -17,6 +19,7 @@ export async function synchronize(syncResponse: { id: number, download_url: stri
 	try {
 		await vault.createFolder('rm-highlights');
 	} catch (e) {
+		new Notice(`Scrybble: Failed to create Scrybble highlights folder, error reference = 102`);
 	}
 	let last_id;
 	for (const {download_url, filename, id} of newFiles) {
@@ -54,7 +57,7 @@ export async function synchronize(syncResponse: { id: number, download_url: stri
 	return last_id;
 }
 
-export async function fetchSyncDelta(access_token: string) {
+export async function fetchSyncDelta(access_token: string): Promise<ReadonlyArray<SyncDelta>> {
 	const response = await requestUrl({
 		url: `${base_url}/api/sync/delta`,
 		method: 'GET',
