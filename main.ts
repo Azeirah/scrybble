@@ -101,14 +101,14 @@ class Settings extends PluginSettingTab {
 							new Notice("Scrybble: Failed to synchronize. Are you logged in?");
 							return;
 						}
-						const json = await fetchSyncDelta(token);
-						const new_last_sync_id = await synchronize(json, this.plugin.settings.last_successful_sync_id);
+						const sync_delta = await fetchSyncDelta(token);
+						const new_last_sync_id = await synchronize(sync_delta, this.plugin.settings.last_successful_sync_id);
 						if (new_last_sync_id) {
 							this.plugin.settings.last_successful_sync_id = new_last_sync_id;
-							this.plugin.saveSettings();
+							await this.plugin.saveSettings();
 						}
 					} catch (e) {
-						console.log('Failure: ', e);
+						new Notice("Scrybble: Failed to log-in, check your username and password");
 					}
 				})
 			})

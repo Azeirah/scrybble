@@ -3,7 +3,7 @@ import * as jszip from "jszip";
 
 const base_url = "http://rmnotesynclaravel-env.eba-3h3bny9s.eu-central-1.elasticbeanstalk.com";
 
-export async function synchronize(syncResponse: { id: number, download_url: string, filename: string }[], lastSuccessfulSync?: number): Promise<number | undefined> {
+export async function synchronize(syncResponse: { id: number, download_url: string, filename: string }[], lastSuccessfulSync: number): Promise<number | undefined> {
 	const newFiles = syncResponse.filter((res) => res.id > lastSuccessfulSync);
 
 	const fileCount = newFiles.length;
