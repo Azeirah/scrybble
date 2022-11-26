@@ -55,9 +55,9 @@ export async function synchronize(syncResponse: { id: number, download_url: stri
 }
 
 export async function fetchSyncDelta(access_token: string) {
-	const response = await fetch(`${base_url}/api/sync/delta`, {
+	const response = await requestUrl({
+		url: `${base_url}/api/sync/delta`,
 		method: 'GET',
-		mode: 'cors',
 		headers: {
 			"Accept": "application/json",
 			"Authorization": `Bearer ${access_token}`
@@ -69,14 +69,14 @@ export async function fetchSyncDelta(access_token: string) {
 export async function fetchOAuthToken(username: string, password: string): Promise<{
 	access_token: string
 }> {
-	const response = await fetch(`${base_url}/oauth/token`, {
+	const response = await requestUrl({
+		url: `${base_url}/oauth/token`,
 		method: 'POST',
-		mode: 'cors',
 		headers: {
 			"Accept": "application/json, text/plain, */*",
 			"Content-Type": "application/x-www-form-urlencoded"
 		},
-		body: new URLSearchParams({
+		body: JSON.stringify({
 			'grant_type': 'password',
 			'client_id': "1",
 			'client_secret': '4L2wSQjPFAbGQFs6nfQkxxdNPBkWdfe86CIOxGlc',
