@@ -1,100 +1,45 @@
-import * as jszip from 'jszip';
-import {App, Notice, Plugin, PluginSettingTab, requestUrl, Setting} from 'obsidian';
-
-const base_url = "http://rmnotesynclaravel-env.eba-3h3bny9s.eu-central-1.elasticbeanstalk.com";
+import {App, Notice, Plugin, PluginSettingTab, Setting} from 'obsidian';
+import {fetchSyncDelta, synchronize, fetchOAuthToken} from "./src/sync";
 
 interface ScrybbleSettings {
-	access_token?: string;
 	last_successful_sync_id: number;
 }
 
 const DEFAULT_SETTINGS: ScrybbleSettings = {
-	access_token: null,
 	last_successful_sync_id: -1
 }
 
+function getAccessToken(): string | null {
+	return localStorage.getItem('scrybble_access_token');
+}
+
 export default class Scrybble extends Plugin {
+	// @ts-ignore -- onload acts as a constructor.
 	settings: ScrybbleSettings;
 
 	async onload() {
-		await this.loadSettings();
+		const token = getAccessToken();
+		const settings = await this.loadSettings();
 		this.addSettingTab(new Settings(this.app, this));
 
-		if (this.settings.access_token !== null) {
-			const json = await fetchSyncDelta(this.settings.access_token);
-			synchronize(json, this);
+		if (token !== null) {
+			const json = await fetchSyncDelta(token);
+			const new_last_sync_id = await synchronize(json, settings.last_successful_sync_id);
+			if (new_last_sync_id) {
+				this.settings.last_successful_sync_id = new_last_sync_id;
+				this.saveSettings();
+			}
 		}
 	}
 
 	async loadSettings() {
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+		return this.settings as ScrybbleSettings;
 	}
 
 	async saveSettings() {
 		await this.saveData(this.settings);
 	}
-}
-
-async function synchronize(syncResponse: { id: number, download_url: string, filename: string }[], plugin: Scrybble) {
-	const lastSuccessfulSync = plugin.settings.last_successful_sync_id;
-	const newFiles = syncResponse.filter((res) => res.id > lastSuccessfulSync);
-
-	const fileCount = newFiles.length;
-	if (fileCount > 0) {
-		new Notice(`Found ${fileCount} new ReMarkable highlights. Downloading!`);
-	} else {
-		new Notice(`No new ReMarkable highlights found.`);
-	}
-
-	const vault = app.vault;
-	try {
-		await vault.createFolder('rm-highlights');
-	} catch (e) {
-	}
-	for (const {download_url, filename, id} of newFiles) {
-		new Notice(`Attempting to download ${filename}`,);
-		const response = await requestUrl({
-			method: "GET",
-			url: download_url
-		});
-		const zip = await jszip.loadAsync(response.arrayBuffer)
-		const data = await zip.file(/_remarks-only.pdf/)[0].async("arraybuffer");
-
-		let dirPath;
-		let nameOfFile;
-		{
-			const atoms = filename.split('/');
-			const dirs = atoms.slice(0, atoms.length - 1);
-			nameOfFile = atoms[atoms.length - 1].replace(':', '--');
-			dirPath = dirs.join('/');
-		}
-		const fullPath = `rm-highlights${dirPath}`;
-		try {
-			await vault.createFolder(fullPath);
-		} catch(e) {}
-
-		const filePath = `${fullPath}/${nameOfFile}.pdf`;
-		const file = vault.getAbstractFileByPath(filePath)
-		if (file !== null) {
-			await vault.delete(file);
-		}
-		await vault.createBinary(filePath, data);
-
-		plugin.settings.last_successful_sync_id = id;
-		await plugin.saveSettings();
-	}
-}
-
-async function fetchSyncDelta(access_token: string) {
-	const response = await fetch(`${base_url}/api/sync/delta`, {
-		method: 'GET',
-		mode: 'cors',
-		headers: {
-			"Accept": "application/json",
-			"Authorization": `Bearer ${access_token}`
-		}
-	})
-	return await response.json();
 }
 
 class Settings extends PluginSettingTab {
@@ -135,33 +80,10 @@ class Settings extends PluginSettingTab {
 			.setDesc('Log in')
 			.addButton((button) => {
 				button.setButtonText('Log in');
-				button.onClick(async (value) => {
-					const form = new URLSearchParams();
-					const input = {
-						'grant_type': 'password',
-						'client_id': 1,
-						'client_secret': '4L2wSQjPFAbGQFs6nfQkxxdNPBkWdfe86CIOxGlc',
-						'username': username,
-						'password': password,
-						'scope': '',
-					};
-					for (let [key, value] of Object.entries(input)) {
-						form.append(key, value);
-					}
-
+				button.onClick(async () => {
 					try {
-						const response = await fetch(`${base_url}/oauth/token`, {
-							method: 'POST',
-							mode: 'cors',
-							headers: {
-								"Accept": "application/json, text/plain, */*",
-								"Content-Type": "application/x-www-form-urlencoded"
-							},
-							body: form
-						})
-						const result = await response.json();
-						this.plugin.settings.access_token = result.access_token;
-						await this.plugin.saveSettings();
+						const {access_token} = await fetchOAuthToken(username, password);
+						localStorage.setItem('scrybble_access_token', access_token);
 					} catch (error) {
 						console.log("error!", error);
 					}
@@ -174,8 +96,17 @@ class Settings extends PluginSettingTab {
 				button.setButtonText('Go');
 				button.onClick(async () => {
 					try {
-						const json = await fetchSyncDelta(this.plugin.settings.access_token);
-						synchronize(json, this.plugin);
+						const token = getAccessToken();
+						if (token === null) {
+							new Notice("Scrybble: Failed to synchronize. Are you logged in?");
+							return;
+						}
+						const json = await fetchSyncDelta(token);
+						const new_last_sync_id = await synchronize(json, this.plugin.settings.last_successful_sync_id);
+						if (new_last_sync_id) {
+							this.plugin.settings.last_successful_sync_id = new_last_sync_id;
+							this.plugin.saveSettings();
+						}
 					} catch (e) {
 						console.log('Failure: ', e);
 					}
