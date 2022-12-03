@@ -1,7 +1,7 @@
 import {Notice, requestUrl} from "obsidian";
 import * as jszip from "jszip";
 
-const base_url = "https://scybble.ink";
+const base_url = "https://scrybble.ink";
 
 type SyncDelta = { id: number, download_url: string, filename: string };
 
