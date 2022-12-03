@@ -66,7 +66,7 @@ export async function fetchSyncDelta(access_token: string): Promise<ReadonlyArra
 			"Authorization": `Bearer ${access_token}`
 		}
 	})
-	return await response.json();
+	return response.json;
 }
 
 export async function fetchOAuthToken(username: string, password: string): Promise<{
@@ -77,7 +77,7 @@ export async function fetchOAuthToken(username: string, password: string): Promi
 		method: 'POST',
 		headers: {
 			"Accept": "application/json, text/plain, */*",
-			"Content-Type": "application/x-www-form-urlencoded"
+			"Content-Type": "application/json"
 		},
 		body: JSON.stringify({
 			'grant_type': 'password',
@@ -88,5 +88,5 @@ export async function fetchOAuthToken(username: string, password: string): Promi
 			'scope': '',
 		})
 	});
-	return await response.json();
+	return response.json;
 }
