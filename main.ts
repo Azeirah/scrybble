@@ -18,9 +18,13 @@ export default class Scrybble extends Plugin {
 	settings: ScrybbleSettings;
 
 	async onload() {
+		this.addSettingTab(new Settings(this.app, this));
+		this.app.workspace.onLayoutReady(this.sync);
+	}
+
+	async sync() {
 		const token = getAccessToken();
 		const settings = await this.loadSettings();
-		this.addSettingTab(new Settings(this.app, this));
 
 		if (token !== null) {
 			const json = await fetchSyncDelta(token);
@@ -29,6 +33,9 @@ export default class Scrybble extends Plugin {
 				this.settings.last_successful_sync_id = new_last_sync_id;
 				this.saveSettings();
 			}
+		} else {
+			new Notice("Scrybble: Failed to synchronize. Are you logged in?");
+			return;
 		}
 	}
 
@@ -102,22 +109,8 @@ class Settings extends PluginSettingTab {
 				.setName('Manual synchronization')
 				.addButton((button) => {
 					button.setButtonText('Go');
-					button.onClick(async () => {
-						const token = getAccessToken();
-						if (token === null) {
-							new Notice("Scrybble: Failed to synchronize. Are you logged in?");
-							return;
-						}
-						try {
-							const sync_delta = await fetchSyncDelta(token);
-							const new_last_sync_id = await synchronize(sync_delta, this.plugin.settings.last_successful_sync_id);
-							if (new_last_sync_id) {
-								this.plugin.settings.last_successful_sync_id = new_last_sync_id;
-								await this.plugin.saveSettings();
-							}
-						} catch (e) {
-							new Notice("Scrybble: sync error reference = 101");
-						}
+					button.onClick(() => {
+						this.plugin.sync();
 					})
 				})
 		}
