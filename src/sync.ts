@@ -19,7 +19,9 @@ export async function synchronize(syncResponse: ReadonlyArray<SyncDelta>, lastSu
 	try {
 		await vault.createFolder('rm-highlights');
 	} catch (e) {
-		new Notice(`Scrybble: Failed to create Scrybble highlights folder, error reference = 102`);
+		if (e instanceof Error && !e.message.includes("already exists")) {
+			new Notice(`Scrybble: Failed to create Scrybble highlights folder, error reference = 102`);
+		}
 	}
 	let last_id;
 	for (const {download_url, filename, id} of newFiles) {

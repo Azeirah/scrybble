@@ -27,15 +27,18 @@ export default class Scrybble extends Plugin {
 		const settings = await this.loadSettings();
 
 		if (token !== null) {
-			const json = await fetchSyncDelta(token);
-			const new_last_sync_id = await synchronize(json, settings.last_successful_sync_id);
-			if (new_last_sync_id) {
-				this.settings.last_successful_sync_id = new_last_sync_id;
-				this.saveSettings();
+			try {
+				const json = await fetchSyncDelta(token);
+				const new_last_sync_id = await synchronize(json, settings.last_successful_sync_id);
+
+				if (new_last_sync_id) {
+					this.settings.last_successful_sync_id = new_last_sync_id;
+					this.saveSettings();
+				}
+			} catch (e) {
+				new Notice("Scrybble: Failed to synchronize. Are you logged in?");
+				return;
 			}
-		} else {
-			new Notice("Scrybble: Failed to synchronize. Are you logged in?");
-			return;
 		}
 	}
 
@@ -91,6 +94,7 @@ class Settings extends PluginSettingTab {
 							localStorage.setItem('scrybble_access_token', access_token);
 						} catch (error) {
 							new Notice("Scrybble: Failed to log in, check your username and password")
+							console.error(error);
 						}
 					});
 				});
