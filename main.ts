@@ -19,7 +19,7 @@ export default class Scrybble extends Plugin {
 
 	async onload() {
 		this.addSettingTab(new Settings(this.app, this));
-		this.app.workspace.onLayoutReady(this.sync);
+		this.app.workspace.onLayoutReady(this.sync.bind(this));
 	}
 
 	async sync() {
