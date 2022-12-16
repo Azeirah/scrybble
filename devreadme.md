@@ -17,3 +17,8 @@ ln -s
 `npm run dev`
 
 You need to restart Obsidian whenever you make a change
+
+## Release
+
+Run `npm version patch`, `npm version minor` or `npm version major` after updating `minAppVersion` manually
+in `manifest.json`.
