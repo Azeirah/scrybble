@@ -1,74 +1,77 @@
-import {Notice, requestUrl} from "obsidian";
-import * as jszip from "jszip";
+import {Notice, requestUrl, TFile} from "obsidian"
+import * as jszip from "jszip"
 
-const base_url = "https://scrybble.ink";
+const base_url = "https://scrybble.ink"
 
 type SyncDelta = { id: number, download_url: string, filename: string };
 
 export async function synchronize(syncResponse: ReadonlyArray<SyncDelta>, lastSuccessfulSync: number): Promise<number | undefined> {
-	const newFiles = syncResponse.filter((res) => res.id > lastSuccessfulSync);
+	const newFiles = syncResponse.filter((res) => res.id > lastSuccessfulSync)
 
-	const fileCount = newFiles.length;
+	const fileCount = newFiles.length
 	if (fileCount > 0) {
-		new Notice(`Found ${fileCount} new ReMarkable highlights. Downloading!`);
+		new Notice(`Found ${fileCount} new ReMarkable highlights. Downloading!`)
 	} else {
-		new Notice(`No new ReMarkable highlights found.`);
+		new Notice(`No new ReMarkable highlights found.`)
 	}
 
-	const vault = app.vault;
+	const vault = app.vault
 	try {
-		await vault.createFolder('rm-highlights');
+		await vault.createFolder("rm-highlights")
 	} catch (e) {
 		if (e instanceof Error && !e.message.includes("already exists")) {
-			new Notice(`Scrybble: Failed to create Scrybble highlights folder, error reference = 102`);
+			new Notice(`Scrybble: Failed to create Scrybble highlights folder, error reference = 102`)
 		}
 	}
-	let last_id;
+	let last_id
 	for (const {download_url, filename, id} of newFiles) {
-		new Notice(`Attempting to download ${filename}`,);
+		new Notice(`Attempting to download ${filename}`)
 		const response = await requestUrl({
 			method: "GET",
 			url: download_url
-		});
+		})
 		const zip = await jszip.loadAsync(response.arrayBuffer)
-		const data = await zip.file(/_remarks-only.pdf/)[0].async("arraybuffer");
+		const data = await zip.file(/_remarks(-only)?.pdf/)[0].async("arraybuffer")
 
-		let dirPath;
-		let nameOfFile;
+		let dirPath
+		let nameOfFile
 		{
-			const atoms = filename.split('/');
-			const dirs = atoms.slice(0, atoms.length - 1);
-			nameOfFile = atoms[atoms.length - 1].replace(':', '--');
-			dirPath = dirs.join('/');
+			const atoms = filename.split("/")
+			const dirs = atoms.slice(0, atoms.length - 1)
+			nameOfFile = atoms[atoms.length - 1].replace(":", "--")
+			dirPath = dirs.join("/")
 		}
-		const fullPath = `rm-highlights${dirPath}`;
+		const fullPath = `rm-highlights${dirPath}`
 		try {
-			await vault.createFolder(fullPath);
+			await vault.createFolder(fullPath)
 		} catch (e) {
 		}
 
-		const filePath = `${fullPath}/${nameOfFile}.pdf`;
+		const filePath = `${fullPath}${nameOfFile}.pdf`
 		const file = vault.getAbstractFileByPath(filePath)
-		if (file !== null) {
-			await vault.delete(file);
+		if (file === null) {
+			await vault.createBinary(filePath, data)
+		} else if (file instanceof TFile) {
+			await vault.modifyBinary(file, data)
+		} else {
+			throw new Error("Scrybble: Unknown error 103")
 		}
-		await vault.createBinary(filePath, data);
 
-		last_id = id;
+		last_id = id
 	}
-	return last_id;
+	return last_id
 }
 
 export async function fetchSyncDelta(access_token: string): Promise<ReadonlyArray<SyncDelta>> {
 	const response = await requestUrl({
 		url: `${base_url}/api/sync/delta`,
-		method: 'GET',
+		method: "GET",
 		headers: {
 			"Accept": "application/json",
 			"Authorization": `Bearer ${access_token}`
 		}
 	})
-	return response.json;
+	return response.json
 }
 
 export async function fetchOAuthToken(username: string, password: string): Promise<{
@@ -76,19 +79,19 @@ export async function fetchOAuthToken(username: string, password: string): Promi
 }> {
 	const response = await requestUrl({
 		url: `${base_url}/oauth/token`,
-		method: 'POST',
+		method: "POST",
 		headers: {
 			"Accept": "application/json, text/plain, */*",
 			"Content-Type": "application/json"
 		},
 		body: JSON.stringify({
-			'grant_type': 'password',
-			'client_id': "1",
-			'client_secret': '4L2wSQjPFAbGQFs6nfQkxxdNPBkWdfe86CIOxGlc',
-			'username': username,
-			'password': password,
-			'scope': '',
+			"grant_type": "password",
+			"client_id": "1",
+			"client_secret": "4L2wSQjPFAbGQFs6nfQkxxdNPBkWdfe86CIOxGlc",
+			"username": username,
+			"password": password,
+			"scope": ""
 		})
-	});
-	return response.json;
+	})
+	return response.json
 }
