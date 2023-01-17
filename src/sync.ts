@@ -5,6 +5,21 @@ const base_url = "https://scrybble.ink"
 
 type SyncDelta = { id: number, download_url: string, filename: string };
 
+/**
+ * Dir paths always end with /
+ * @param filePath
+ */
+function dirPath(filePath: string): string {
+	const atoms = filePath.split("/")
+	const dirs = atoms.slice(0, atoms.length - 1)
+	return dirs.filter((a) => Boolean(a)).join("/") + "/"
+}
+
+function basename(filePath: string): string {
+	const atoms = filePath.split("/")
+	return atoms[atoms.length - 1]
+}
+
 export async function synchronize(syncResponse: ReadonlyArray<SyncDelta>, lastSuccessfulSync: number): Promise<number | undefined> {
 	const newFiles = syncResponse.filter((res) => res.id > lastSuccessfulSync)
 
@@ -33,28 +48,23 @@ export async function synchronize(syncResponse: ReadonlyArray<SyncDelta>, lastSu
 		const zip = await jszip.loadAsync(response.arrayBuffer)
 		const data = await zip.file(/_remarks(-only)?.pdf/)[0].async("arraybuffer")
 
-		let dirPath
-		let nameOfFile
-		{
-			const atoms = filename.split("/")
-			const dirs = atoms.slice(0, atoms.length - 1)
-			nameOfFile = atoms[atoms.length - 1].replace(":", "--")
-			dirPath = dirs.join("/")
-		}
-		const fullPath = `rm-highlights${dirPath}`
+		let relativePath = dirPath(filename)
+		let nameOfFile = basename(filename)
+
+		const folderPath = relativePath.startsWith("/") ? `rm-highlights${relativePath}` : `rm-highlights/${relativePath}`
 		try {
-			await vault.createFolder(fullPath)
+			await vault.createFolder(folderPath)
 		} catch (e) {
 		}
 
-		const filePath = `${fullPath}${nameOfFile}.pdf`
+		const filePath = `${folderPath}${nameOfFile}.pdf`
 		const file = vault.getAbstractFileByPath(filePath)
 		if (file === null) {
 			await vault.createBinary(filePath, data)
 		} else if (file instanceof TFile) {
 			await vault.modifyBinary(file, data)
 		} else {
-			throw new Error("Scrybble: Unknown error 103")
+			throw new Error("Scrybble: Unknown error reference = 103")
 		}
 
 		last_id = id
