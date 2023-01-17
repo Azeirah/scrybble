@@ -20,5 +20,7 @@ You need to restart Obsidian whenever you make a change
 
 ## Release
 
-Run `npm version patch`, `npm version minor` or `npm version major` after updating `minAppVersion` manually
-in `manifest.json`.
+1. [ ] Run `npm version {patch|minor|major}` after updating (if necessary) `minAppVersion` in `manifest.json`
+2. [ ] run `npm build`
+3. [ ] On Github, create new release with tag `v{YOUR VERSION}`
+	- Attach `main.js`, `main.css` and `manifest.json`
