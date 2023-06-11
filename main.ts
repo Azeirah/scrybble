@@ -4,7 +4,7 @@ import {ScrybbleSettings} from "./@types/scrybble";
 
 const DEFAULT_SETTINGS: ScrybbleSettings = {
 	last_successful_sync_id: -1,
-	sync_folder: "rm-highlights"
+	sync_folder: "scrybble"
 }
 
 function getAccessToken(): string | null {
