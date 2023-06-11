@@ -86,8 +86,7 @@ export class Settings extends PluginSettingTab {
 					button.onClick(() => {
 						this.plugin.sync();
 					})
-				})
+				});
 		}
-
 	}
 }
