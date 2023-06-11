@@ -1,9 +1,8 @@
 import {Notice, requestUrl, TFile} from "obsidian"
 import * as jszip from "jszip"
+import {SyncDelta} from "../@types/scrybble";
 
 const base_url = "https://scrybble.ink"
-
-type SyncDelta = { id: number, download_url: string, filename: string };
 
 /**
  * Dir paths always end with /

@@ -1,9 +1,6 @@
 import {App, Notice, Plugin, PluginSettingTab, Setting} from 'obsidian';
-import {fetchSyncDelta, synchronize, fetchOAuthToken} from "./src/sync";
-
-interface ScrybbleSettings {
-	last_successful_sync_id: number;
-}
+import {fetchOAuthToken, fetchSyncDelta, synchronize} from "./src/sync";
+import {ScrybbleSettings} from "./@types/scrybble";
 
 const DEFAULT_SETTINGS: ScrybbleSettings = {
 	last_successful_sync_id: -1
