@@ -19,7 +19,7 @@ function basename(filePath: string): string {
 	return atoms[atoms.length - 1]
 }
 
-export async function synchronize(syncResponse: ReadonlyArray<SyncDelta>, lastSuccessfulSync: number, sync_folder: string): Promise<number | undefined> {
+export async function* synchronize(syncResponse: ReadonlyArray<SyncDelta>, lastSuccessfulSync: number, sync_folder: string): AsyncGenerator<number> {
 	const newFiles = syncResponse.filter((res) => res.id > lastSuccessfulSync)
 
 	const fileCount = newFiles.length
@@ -37,7 +37,6 @@ export async function synchronize(syncResponse: ReadonlyArray<SyncDelta>, lastSu
 			new Notice(`Scrybble: Failed to create Scrybble highlights folder, error reference = 102`)
 		}
 	}
-	let last_id
 	for (const {download_url, filename, id} of newFiles) {
 		new Notice(`Attempting to download ${filename}`)
 		const response = await requestUrl({
@@ -66,9 +65,8 @@ export async function synchronize(syncResponse: ReadonlyArray<SyncDelta>, lastSu
 			throw new Error("Scrybble: Unknown error reference = 103")
 		}
 
-		last_id = id
+		yield id;
 	}
-	return last_id
 }
 
 export async function fetchSyncDelta(access_token: string): Promise<ReadonlyArray<SyncDelta>> {
