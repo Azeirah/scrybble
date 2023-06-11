@@ -108,6 +108,16 @@ class Settings extends PluginSettingTab {
 				});
 
 			new Setting(containerEl)
+				.setName('Output folder')
+				.setDesc('Folder where your synchronized files will be stored.')
+				.addText((text) => text
+					.setValue(this.plugin.settings.sync_folder)
+					.onChange((value) => {
+						this.plugin.settings.sync_folder = value;
+						this.plugin.saveSettings();
+					}));
+
+			new Setting(containerEl)
 				.setName('Manual synchronization')
 				.addButton((button) => {
 					button.setButtonText('Go');
