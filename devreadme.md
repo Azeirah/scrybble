@@ -5,11 +5,11 @@
 ```shell
 npm i
 # go to your obsidian folder
-# cd ~/Lauranomicon/.obsidian
+# cd ~/DocumentsLauranomicon/.obsidian
 mkdir -p plugins
 cd plugins
 # symlink this project to the plugins folder
-ln -s 
+ln -s ~/PhpstormProjects/scrybble/ scrybble.beta
 ```
 
 ## Development
