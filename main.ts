@@ -3,7 +3,8 @@ import {fetchOAuthToken, fetchSyncDelta, synchronize} from "./src/sync";
 import {ScrybbleSettings} from "./@types/scrybble";
 
 const DEFAULT_SETTINGS: ScrybbleSettings = {
-	last_successful_sync_id: -1
+	last_successful_sync_id: -1,
+	sync_folder: "rm-highlights"
 }
 
 function getAccessToken(): string | null {
@@ -26,7 +27,7 @@ export default class Scrybble extends Plugin {
 		if (token !== null) {
 			try {
 				const json = await fetchSyncDelta(token);
-				const new_last_sync_id = await synchronize(json, settings.last_successful_sync_id);
+				const new_last_sync_id = await synchronize(json, settings.last_successful_sync_id, settings.sync_folder);
 
 				if (new_last_sync_id) {
 					this.settings.last_successful_sync_id = new_last_sync_id;

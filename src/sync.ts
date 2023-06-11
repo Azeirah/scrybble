@@ -19,7 +19,7 @@ function basename(filePath: string): string {
 	return atoms[atoms.length - 1]
 }
 
-export async function synchronize(syncResponse: ReadonlyArray<SyncDelta>, lastSuccessfulSync: number): Promise<number | undefined> {
+export async function synchronize(syncResponse: ReadonlyArray<SyncDelta>, lastSuccessfulSync: number, sync_folder: string): Promise<number | undefined> {
 	const newFiles = syncResponse.filter((res) => res.id > lastSuccessfulSync)
 
 	const fileCount = newFiles.length
@@ -31,7 +31,7 @@ export async function synchronize(syncResponse: ReadonlyArray<SyncDelta>, lastSu
 
 	const vault = app.vault
 	try {
-		await vault.createFolder("rm-highlights")
+		await vault.createFolder(sync_folder)
 	} catch (e) {
 		if (e instanceof Error && !e.message.includes("already exists")) {
 			new Notice(`Scrybble: Failed to create Scrybble highlights folder, error reference = 102`)
@@ -50,7 +50,7 @@ export async function synchronize(syncResponse: ReadonlyArray<SyncDelta>, lastSu
 		let relativePath = dirPath(filename)
 		let nameOfFile = basename(filename)
 
-		const folderPath = relativePath.startsWith("/") ? `rm-highlights${relativePath}` : `rm-highlights/${relativePath}`
+		const folderPath = relativePath.startsWith("/") ? `${sync_folder}${relativePath}` : `${sync_folder}/${relativePath}`
 		try {
 			await vault.createFolder(folderPath)
 		} catch (e) {
