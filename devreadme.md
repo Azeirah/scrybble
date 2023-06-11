@@ -16,7 +16,8 @@ ln -s ~/PhpstormProjects/scrybble/ scrybble.beta
 
 `npm run dev`
 
-You need to restart Obsidian whenever you make a change
+You need to restart Obsidian whenever you make a change. 
+Use the "reload app without saving changes" command in obsidian to restart quickly.
 
 ## Release
 
