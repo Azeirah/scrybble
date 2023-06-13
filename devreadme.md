@@ -22,6 +22,7 @@ Use the "reload app without saving changes" command in obsidian to restart quick
 ## Release
 
 1. [ ] Run `npm version {patch|minor|major}` after updating (if necessary) `minAppVersion` in `manifest.json`
-2. [ ] run `npm run build`
-3. [ ] On Github, create new release with tag `v{YOUR VERSION}`
-	- Attach `main.js`, `main.css` and `manifest.json`
+2. [ ] Push to Github
+3. [ ] run `npm run build`
+4. [ ] On Github, create new release with tag `{YOUR VERSION}` and title `v{YOUR VERSION}`
+    - Attach `main.js`, `main.css` and `manifest.json`
