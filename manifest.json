@@ -1,7 +1,7 @@
 {
 	"id": "scrybble.ink",
 	"name": "Scrybble",
-	"version": "2.6.0",
+	"version": "2.6.1",
 	"minAppVersion": "0.12.0",
 	"description": "Synchronize highlights from your ReMarkable to Obsidian!",
 	"author": "Streamsoft",
