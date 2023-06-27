@@ -35,6 +35,7 @@ export default class Scrybble extends Plugin {
 				}
 			} catch (e) {
 				new Notice("Scrybble: Failed to synchronize. Are you logged in?");
+				console.error(e);
 				return;
 			}
 		}
