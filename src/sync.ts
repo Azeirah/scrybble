@@ -19,6 +19,17 @@ function basename(filePath: string): string {
 	return atoms[atoms.length - 1]
 }
 
+function sanitizeFilename(filePath: string): string {
+	const tokens = ['*', '"', "\\", "/", "<", ">", ":", "|", "?"];
+
+	tokens.forEach((token) => {
+		const regex = new RegExp('\\' + token, 'g');
+		filePath = filePath.replace(regex, "_");
+	});
+
+	return filePath;
+}
+
 export async function* synchronize(syncResponse: ReadonlyArray<SyncDelta>, lastSuccessfulSync: number, sync_folder: string): AsyncGenerator<number> {
 	const newFiles = syncResponse.filter((res) => res.id > lastSuccessfulSync)
 
@@ -47,7 +58,7 @@ export async function* synchronize(syncResponse: ReadonlyArray<SyncDelta>, lastS
 		const data = await zip.file(/_remarks(-only)?.pdf/)[0].async("arraybuffer")
 
 		let relativePath = dirPath(filename)
-		let nameOfFile = basename(filename)
+		let nameOfFile = sanitizeFilename(basename(filename))
 
 		const folderPath = relativePath.startsWith("/") ? `${sync_folder}${relativePath}` : `${sync_folder}/${relativePath}`
 		try {
@@ -58,9 +69,17 @@ export async function* synchronize(syncResponse: ReadonlyArray<SyncDelta>, lastS
 		const filePath = `${folderPath}${nameOfFile}.pdf`
 		const file = vault.getAbstractFileByPath(filePath)
 		if (file === null) {
-			await vault.createBinary(filePath, data)
+			try {
+				await vault.createBinary(filePath, data)
+			} catch {
+				throw new Error(`Scrybble: Was unable to write file ${filePath}, reference = 104`)
+			}
 		} else if (file instanceof TFile) {
-			await vault.modifyBinary(file, data)
+			try {
+				await vault.modifyBinary(file, data)
+			} catch {
+				throw new Error(`Scrybble: Was unable to modify file ${filePath}, reference = 105`)
+			}
 		} else {
 			throw new Error("Scrybble: Unknown error reference = 103")
 		}
