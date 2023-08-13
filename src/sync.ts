@@ -1,4 +1,4 @@
-import {App, Notice, requestUrl, TAbstractFile, TFile} from "obsidian"
+import {App, Notice, requestUrl, TFile} from "obsidian"
 import * as jszip from "jszip"
 import {SyncDelta} from "../@types/scrybble";
 
@@ -30,7 +30,8 @@ function sanitizeFilename(filePath: string): string {
 	return filePath;
 }
 
-async function writeToFile(vault: App["vault"], file: TAbstractFile | null, filePath: string, data: ArrayBuffer) {
+async function writeToFile(vault: App["vault"], filePath: string, data: ArrayBuffer) {
+	const file = vault.getAbstractFileByPath(filePath)
 	if (file === null) {
 		try {
 			await vault.createBinary(filePath, data)
@@ -56,6 +57,19 @@ async function ensureFolderExists(vault: App["vault"], relativePath: string, syn
 	}
 
 	return folderPath
+}
+
+async function zippedFileToVault(vault: App["vault"], zip: jszip, nameMatch: RegExp, vaultFileName: string, required = true) {
+	try {
+		const data = await zip.file(nameMatch)[0].async("arraybuffer")
+		await writeToFile(vault, vaultFileName, data)
+	} catch (e) {
+		if (required) {
+			throw new Error("Scrybble: Missing file in downloaded sync zip, reference = 106")
+		} else {
+			return;
+		}
+	}
 }
 
 export async function* synchronize(syncResponse: ReadonlyArray<SyncDelta>, lastSuccessfulSync: number, sync_folder: string): AsyncGenerator<number> {
@@ -88,11 +102,8 @@ export async function* synchronize(syncResponse: ReadonlyArray<SyncDelta>, lastS
 		let nameOfFile = sanitizeFilename(basename(filename))
 		const folderPath = await ensureFolderExists(vault, relativePath, sync_folder)
 
-		const filePath = `${folderPath}${nameOfFile}.pdf`
-		const file = vault.getAbstractFileByPath(filePath)
-
-		const data = await zip.file(/_remarks(-only)?.pdf/)[0].async("arraybuffer")
-		await writeToFile(vault, file, filePath, data)
+		await zippedFileToVault(vault, zip, /_remarks(-only)?.pdf/, `${folderPath}${nameOfFile}.pdf`)
+		await zippedFileToVault(vault, zip, /_obsidian.md/, `${folderPath}${nameOfFile}.md`, false)
 
 		yield id;
 	}
