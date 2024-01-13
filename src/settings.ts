@@ -5,7 +5,12 @@ import Scrybble from "../main";
 
 export const DEFAULT_SETTINGS: ScrybbleSettings = {
 	last_successful_sync_id: -1,
-	sync_folder: "scrybble"
+	sync_folder: "scrybble",
+	self_hosted: false,
+	custom_host: {
+		endpoint: "",
+		client_secret: ""
+	},
 }
 
 export function getAccessToken(): string | null {
@@ -28,7 +33,7 @@ export class Settings extends PluginSettingTab {
 		let username = "";
 
 		containerEl.empty();
-		containerEl.createEl('h2', {text: 'Sync ReMarkable notes'});
+		containerEl.createEl('h1', {text: 'Sync ReMarkable notes'});
 
 		if (access_token === null) {
 			new Setting(containerEl)
@@ -50,8 +55,10 @@ export class Settings extends PluginSettingTab {
 					button.setButtonText('Log in');
 					button.onClick(async () => {
 						try {
-							const {access_token} = await fetchOAuthToken(username, password);
+							const host = this.plugin.getHost();
+							const {access_token} = await fetchOAuthToken(host.endpoint, host.client_secret, username, password);
 							localStorage.setItem('scrybble_access_token', access_token);
+							this.display();
 						} catch (error) {
 							new Notice("Scrybble: Failed to log in, check your username and password")
 							console.error(error);
@@ -66,6 +73,7 @@ export class Settings extends PluginSettingTab {
 					button.setButtonText('Log out');
 					button.onClick(async () => {
 						localStorage.removeItem('scrybble_access_token');
+						this.display();
 					});
 				});
 
@@ -87,6 +95,49 @@ export class Settings extends PluginSettingTab {
 						this.plugin.sync();
 					})
 				});
+		}
+
+		containerEl.createEl("h2", {text: "Scrybble server"})
+
+		new Setting(containerEl)
+			.setName("Self hosted")
+			.setDesc("Enable if you host your own Scrybble server")
+			.addToggle((toggle) => {
+				toggle.setValue(this.plugin.settings.self_hosted)
+					.onChange((value) => {
+						this.plugin.settings.self_hosted = value;
+						this.plugin.saveSettings();
+						this.display();
+					})
+			})
+
+		if (this.plugin.settings.self_hosted) {
+			new Setting(containerEl)
+				.setName("Endpoint")
+				.setDesc("Link to a Scrybble server, leave unchanged for the official scrybble.ink server")
+				.addText((text) => text
+					.setPlaceholder("http://localhost")
+					.setValue(this.plugin.settings.custom_host.endpoint)
+					.onChange((value) => {
+						this.plugin.settings.custom_host.endpoint = value;
+						this.plugin.saveSettings();
+					}));
+
+
+			new Setting(containerEl)
+				.setName("Server client secret")
+				.setDesc("Visit http://{your-host}/client-secret")
+				.addText((text) => {
+					text.inputEl.setAttribute('type', 'password')
+					return text
+						.setValue(this.plugin.settings.custom_host.client_secret)
+						.onChange((value) => {
+							this.plugin.settings.custom_host.client_secret = value;
+							this.plugin.saveSettings();
+						});
+				});
+		} else {
+			containerEl.createEl("p", {text: "Connected to the official scrybble server, no additional configuration required."});
 		}
 	}
 }

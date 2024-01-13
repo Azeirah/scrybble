@@ -2,8 +2,6 @@ import {App, Notice, requestUrl, TFile} from "obsidian"
 import * as jszip from "jszip"
 import {SyncDelta} from "../@types/scrybble";
 
-const base_url = "https://scrybble.ink"
-
 /**
  * Dir paths always end with /
  * @param filePath
@@ -109,7 +107,7 @@ export async function* synchronize(syncResponse: ReadonlyArray<SyncDelta>, lastS
 	}
 }
 
-export async function fetchSyncDelta(access_token: string): Promise<ReadonlyArray<SyncDelta>> {
+export async function fetchSyncDelta(base_url: string, access_token: string): Promise<ReadonlyArray<SyncDelta>> {
 	const response = await requestUrl({
 		url: `${base_url}/api/sync/delta`,
 		method: "GET",
@@ -121,7 +119,7 @@ export async function fetchSyncDelta(access_token: string): Promise<ReadonlyArra
 	return response.json
 }
 
-export async function fetchOAuthToken(username: string, password: string): Promise<{
+export async function fetchOAuthToken(base_url: string, client_secret: string, username: string, password: string): Promise<{
 	access_token: string
 }> {
 	const response = await requestUrl({
@@ -134,7 +132,7 @@ export async function fetchOAuthToken(username: string, password: string): Promi
 		body: JSON.stringify({
 			"grant_type": "password",
 			"client_id": "1",
-			"client_secret": "4L2wSQjPFAbGQFs6nfQkxxdNPBkWdfe86CIOxGlc",
+			"client_secret": client_secret,
 			"username": username,
 			"password": password,
 			"scope": ""
