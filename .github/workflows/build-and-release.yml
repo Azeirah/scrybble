@@ -19,6 +19,6 @@ jobs:
             -   run: npm run build --if-present
             -   run: |
                     gh release create v${{env.RELEASE_VERSION}}
-                    gh release upload ${{env.RELEASE_VERSION}} main.js manifest.json
+                    gh release upload v${{env.RELEASE_VERSION}} main.js manifest.json
                 env:
                     GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
