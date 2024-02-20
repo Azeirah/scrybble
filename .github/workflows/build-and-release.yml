@@ -24,4 +24,3 @@ jobs:
             -   run: gh release upload ${{env.RELEASE_VERSION}} main.js manifest.json
                 env:
                     GITHUB_TOKEN: ${{ github.TOKEN }}
-                shell: bash
