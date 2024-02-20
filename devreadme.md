@@ -21,7 +21,7 @@ Use the "reload app without saving changes" command in obsidian to restart quick
 
 ## Release
 
-Working on doing this on push!
+Working on doing this on push using github actions!
 
 1. [ ] Run `npm version {patch|minor|major}` after updating (if necessary) `minAppVersion` in `manifest.json`
 2. [ ] Push to Github
