@@ -23,4 +23,4 @@ jobs:
             -   run: npm run build --if-present
             -   run: gh release upload ${{env.RELEASE_VERSION}} main.js manifest.json
                 env:
-                    GITHUB_TOKEN: ${{ github.TOKEN }}
+                    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
