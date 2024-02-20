@@ -1,6 +1,6 @@
 {
 	"name": "Scrybble",
-	"version": "2.10.5",
+	"version": "2.10.6",
 	"description": "This is a sample plugin for Obsidian (https://obsidian.md)",
 	"main": "main.js",
 	"scripts": {
