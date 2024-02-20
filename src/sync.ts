@@ -48,7 +48,8 @@ async function writeToFile(vault: App["vault"], filePath: string, data: ArrayBuf
 }
 
 async function ensureFolderExists(vault: App["vault"], relativePath: string, sync_folder: string) {
-	const folderPath = relativePath.startsWith("/") ? `${sync_folder}${relativePath}` : `${sync_folder}/${relativePath}`
+	let folderPath = relativePath.startsWith("/") ? `${sync_folder}${relativePath}` : `${sync_folder}/${relativePath}`
+	folderPath = folderPath.split("/").map((folderName) => sanitizeFilename(folderName)).join("/")
 	try {
 		await vault.createFolder(folderPath)
 	} catch (e) {
