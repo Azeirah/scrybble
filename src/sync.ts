@@ -52,6 +52,9 @@ async function ensureFolderExists(vault: App["vault"], relativePath: string, syn
 	try {
 		await vault.createFolder(folderPath)
 	} catch (e) {
+		if (e instanceof Error && !e.message.includes("already exists")) {
+			new Notice(`Scrybble: failed to create Scrybble highlights folder at ${relativePath}. Error reference = 102`)
+		}
 	}
 
 	return folderPath
@@ -81,13 +84,8 @@ export async function* synchronize(syncResponse: ReadonlyArray<SyncDelta>, lastS
 	}
 
 	const vault = app.vault
-	try {
-		await vault.createFolder(sync_folder)
-	} catch (e) {
-		if (e instanceof Error && !e.message.includes("already exists")) {
-			new Notice(`Scrybble: Failed to create Scrybble highlights folder, error reference = 102`)
-		}
-	}
+
+	await ensureFolderExists(vault, "", sync_folder)
 	for (const {download_url, filename, id} of newFiles) {
 		new Notice(`Attempting to download ${filename}`)
 		const response = await requestUrl({
