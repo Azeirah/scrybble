@@ -88,19 +88,23 @@ export async function* synchronize(syncResponse: ReadonlyArray<SyncDelta>, lastS
 
 	await ensureFolderExists(vault, "", sync_folder)
 	for (const {download_url, filename, id} of newFiles) {
-		new Notice(`Attempting to download ${filename}`)
-		const response = await requestUrl({
-			method: "GET",
-			url: download_url
-		})
-		const zip = await jszip.loadAsync(response.arrayBuffer)
-
 		let relativePath = dirPath(filename)
 		let nameOfFile = sanitizeFilename(basename(filename))
 		const folderPath = await ensureFolderExists(vault, relativePath, sync_folder)
 
-		await zippedFileToVault(vault, zip, /_remarks(-only)?.pdf/, `${folderPath}${nameOfFile}.pdf`)
-		await zippedFileToVault(vault, zip, /_obsidian.md/, `${folderPath}${nameOfFile}.md`, false)
+		const progress = new Notice(`Attempting to download ${filename}`)
+		const response = await requestUrl({
+			method: "GET",
+			url: download_url
+		})
+
+		try {
+			const zip = await jszip.loadAsync(response.arrayBuffer)
+			await zippedFileToVault(vault, zip, /_remarks(-only)?.pdf/, `${folderPath}${nameOfFile}.pdf`)
+			await zippedFileToVault(vault, zip, /_obsidian.md/, `${folderPath}${nameOfFile}.md`, false)
+		} catch (e) {
+			progress.setMessage(`Failed to download ${filename}, skipping`)
+		}
 
 		yield id;
 	}
